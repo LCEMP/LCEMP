@@ -4,6 +4,7 @@ LCEMP is my Minecraft Legacy Console Edition source fork that enables LAN multip
 ## notes:
   - This is NOT the full source code.
   - You need to provide the required asset files yourself.
+    - This project is based off of the `minecraft.rar` file.
   - Code quality is not perfect. I am still learning C++.
   - If you use this in other LCE-based projects, credit me.
 
