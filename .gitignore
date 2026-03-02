@@ -185,3 +185,8 @@ Minecraft.Client/PS3/PS3Extras/HeapInspector/
 
 # Sony remote storage libs
 Minecraft.Client/Common/Network/Sony/
+
+# ===========================================
+# CustomSkins exception
+# ===========================================
+!CustomSkins/*
