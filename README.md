@@ -35,71 +35,56 @@ example:
   command: "Minecraft.Client.exe -name Steve -ip 192.168.0.25 -port 25565"
 
 required_assets:
-  - path: Minecraft.Client/music/
-    content: Music files (.binka)
+    directories:
+  - path: Minecraft.Client\music\
+  - path: Minecraft.Client\Common\Media\
+  - path: Minecraft.Client\Common\res\
+  - path: Minecraft.Client\Common\DummyTexturePack\
+  - path: Minecraft.Client\DurangoMedia\
+  - path: Minecraft.Client\OrbisMedia\
+  - path: Minecraft.Client\PS3Media\
+  - path: Minecraft.Client\PSVitaMedia\
+  - path: Minecraft.Client\Windows64Media\
+  - path: Minecraft.Client\redist64\
+  - path: Minecraft.Client\PS3_GAME\
+  - path: Minecraft.Client\PS4_GAME\
+  - path: Minecraft.Client\sce_sys\
+  - path: Minecraft.Client\TROPDIR\
+  - path: Minecraft.Client\PS3\PS3Extras\DirectX\
+  - path: Minecraft.Client\PS3\PS3Extras\HeapInspector\
+  - path: Minecraft.Client\Common\Network\Sony\
+  - path: Minecraft.Client\common\dlc\
+  - path: Minecraft.Client\durango\sound\
+  - path: Minecraft.Client\Xbox\4JLibs\
+  - path: Minecraft.Client\Windows64\4JLibs\
+  - path: Minecraft.Client\PSVita\4JLibs\
+  - path: Minecraft.Client\PS3\4JLibs\
+  - path: Minecraft.Client\Orbis\4JLibs\
+  - path: Minecraft.Client\Durango\4JLibs\
+  - path: Minecraft.Client\Windows64\Miles\
+  - path: Minecraft.Client\PSVita\Miles\
+  - path: Minecraft.Client\PS3\Miles\
+  - path: Minecraft.Client\Orbis\Miles\
+  - path: Minecraft.Client\Durango\Miles\
+  - path: Minecraft.Client\Durango\Iggy\
+  - path: Minecraft.Client\Windows64\Iggy\
+  - path: Minecraft.Client\PSVita\Iggy\
+  - path: Minecraft.Client\PS3\Iggy\
+  - path: Minecraft.Client\Orbis\Iggy\
+  - path: Minecraft.Client\PS3\Sentient\
+  - path: Minecraft.Client\Orbis\Sentient\
+  - path: Minecraft.Client\Durango\Sentient\
+  - path: Minecraft.Client\Xbox\Sentient\
+  - path: Minecraft.Client\Windows64\Sentient\
+  - path: Minecraft.Client\PSVita\Sentient\
+  - path: Minecraft.Client\PS3\PS3Extras\boost_1_53_0\
 
-  - path: Minecraft.Client/Common/Media/
-    content: UI (.swf), graphics (.png), sounds (.wav), fonts, localization, XUI scenes, .arc archives
-
-  - path: Minecraft.Client/Common/res/
-    content: Game textures (terrain, gui, mobs, items, fonts, particles, etc.)
-
-  - path: Minecraft.Client/Common/DummyTexturePack/
-    content: Default texture pack resources
-
-  - path: Minecraft.Client/DurangoMedia/
-    content: Xbox One platform media
-
-  - path: Minecraft.Client/OrbisMedia/
-    content: PS4 platform media
-
-  - path: Minecraft.Client/PS3Media/
-    content: PS3 platform media
-
-  - path: Minecraft.Client/PSVitaMedia/
-    content: PS Vita platform media
-
-  - path: Minecraft.Client/Windows64Media/
-    content: Windows 64 platform media
-
-  - path: Minecraft.Client/redist64/
-    content: Miles Sound System redistributables
-
-  - path: Minecraft.Client/PS3_GAME/
-    content: PS3 game package files
-
-  - path: Minecraft.Client/PS4_GAME/
-    content: PS4 game package files
-
-  - path: Minecraft.Client/sce_sys/
-    content: PS Vita system files
-
-  - path: Minecraft.Client/TROPDIR/
-    content: Trophy data
-
-  - path: "**/4JLibs/"
-    content: 4J Studios proprietary libraries
-
-  - path: "**/Miles/"
-    content: Miles Sound System middleware
-
-  - path: "**/Iggy/"
-    content: Iggy / Scaleform UI middleware
-
-  - path: "**/Sentient/"
-    content: Sentient middleware
-
-  - path: Minecraft.Client/PS3/PS3Extras/boost_*/
-    content: Boost C++ 1.53.0
-
-  - path: Minecraft.Client/PS3/PS3Extras/DirectX/
-    content: DirectX math headers
-
-  - path: Minecraft.Client/PS3/PS3Extras/HeapInspector/
-    content: Heap inspector static libraries
-
-  - path: Minecraft.Client/Common/Network/Sony/
-    content: Sony remote storage libraries
+    files:
+  - path: Minecraft.Client\xbox\MinecraftWindows.rc
+  - path: Minecraft.Client\xbox\MinecraftWindows.ico
+  - path: Minecraft.Client\xbox\small.ico
+  - path: x64\Debug\iggy_w64.dll
+  - path: x64\Debug\mss64.dll
 
 install:
   - Get required assets.
