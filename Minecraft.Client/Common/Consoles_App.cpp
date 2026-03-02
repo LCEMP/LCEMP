@@ -5432,7 +5432,7 @@ void CMinecraftApp::RemoveMemoryTextureFile(const wstring &wName)
 	LeaveCriticalSection(&csMemFilesLock);
 }
 
-void CMinecraftApp::ScanAndLoadCustomSkins()
+void CMinecraftApp::ScanAndLoadCustomSkins() // By 0xlibless ;) 
 {
 	DebugPrintf("CustomSkins scanning inited\n");
 	

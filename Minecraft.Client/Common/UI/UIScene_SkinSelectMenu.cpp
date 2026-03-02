@@ -256,8 +256,21 @@ void UIScene_SkinSelectMenu::handleInput(int iPad, int key, bool repeat, bool pr
 					}
 				}
 				break;
+			case SKIN_SELECT_PACK_PLAYER_CUSTOM:
+				if (app.m_customSkinNames.size() > 0)
+				{
+					wstring selectedSkin = app.m_customSkinNames[m_skinIndex];
+					app.SetPlayerSkin(iPad, selectedSkin);
+					app.SetPlayerCape(iPad, L"");
+					setCharacterSelected(true);
+					m_currentSkinPath = app.GetPlayerSkinName(iPad);
+					m_originalSkinId = app.GetPlayerSkinId(iPad);
+					ui.PlayUISFX(eSFX_Press);
+				}
+				break;
 			default:
 				if( m_currentPack != NULL )
+
 				{
 					DLCSkinFile *skinFile = m_currentPack->getSkinFile(m_skinIndex);
 
@@ -605,7 +618,8 @@ void UIScene_SkinSelectMenu::InputActionOK(unsigned int iPad)
 			app.SetPlayerSkin(iPad, selectedSkin);
 			app.SetPlayerCape(iPad, L"");
 			setCharacterSelected(true);
-			m_currentSkinPath = selectedSkin;
+			m_currentSkinPath = app.GetPlayerSkinName(iPad);
+			m_originalSkinId = app.GetPlayerSkinId(iPad);
 			ui.PlayUISFX(eSFX_Press);
 		}
 		break;
@@ -1011,6 +1025,15 @@ void UIScene_SkinSelectMenu::handleSkinIndexChanged()
 						}
 					}
 					break;
+				case SKIN_SELECT_PACK_PLAYER_CUSTOM:
+					if (app.m_customSkinNames.size() > 0)
+					{
+						otherSkinPath = app.m_customSkinNames[nextIndex];
+						otherCapePath = L"";
+						othervAdditionalSkinBoxes = NULL;
+						backupTexture = TN_MOB_CHAR;
+					}
+					break;
 				default:
 					break;
 				}
@@ -1081,7 +1104,15 @@ void UIScene_SkinSelectMenu::handleSkinIndexChanged()
 							backupTexture = TN_MOB_CHAR;
 						}
 					}
-
+					break;
+				case SKIN_SELECT_PACK_PLAYER_CUSTOM:
+					if (app.m_customSkinNames.size() > 0)
+					{
+						otherSkinPath = app.m_customSkinNames[previousIndex];
+						otherCapePath = L"";
+						othervAdditionalSkinBoxes = NULL;
+						backupTexture = TN_MOB_CHAR;
+					}
 					break;
 				default:
 					break;
@@ -1282,10 +1313,11 @@ void UIScene_SkinSelectMenu::handlePackIndexChanged()
 					if(found) m_skinIndex = app.GetPlayerFavoriteSkinsPos(m_iPad);
 				}
 			}
-			break;
-		default:
-			break;
-		}
+		break;
+	default:
+		break;
+	}
+
 	}
 	handleSkinIndexChanged();
 	updatePackDisplay();
