@@ -123,8 +123,8 @@ void UIScene_AbstractContainerMenu::PlatformInitialize(int iPad, int startIndex)
 #ifdef __ORBIS__
 	// we need to map the touchpad rectangle to the UI rectangle. While it works great for the creative menu, it is much too sensitive for the smaller menus.
 	//X coordinate of the touch point (0 to 1919)    
-	//Y coordinate of the touch point (0 to 941: DUALSHOCK�4 wireless controllers and the CUH-ZCT1J/CAP-ZCT1J/CAP-ZCT1U controllers for the PlayStation�4 development tool,    
-	//0 to 753: JDX-1000x series controllers for the PlayStation�4 development tool,)     
+	//Y coordinate of the touch point (0 to 941: DUALSHOCK®4 wireless controllers and the CUH-ZCT1J/CAP-ZCT1J/CAP-ZCT1U controllers for the PlayStation®4 development tool,    
+	//0 to 753: JDX-1000x series controllers for the PlayStation®4 development tool,)     
 	m_fTouchPadMulX=fPanelWidth/1919.0f;
 	m_fTouchPadMulY=fPanelHeight/941.0f;
 	m_fTouchPadDeadZoneX=15.0f*m_fTouchPadMulX;
