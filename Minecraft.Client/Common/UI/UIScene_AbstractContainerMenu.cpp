@@ -45,6 +45,7 @@ void UIScene_AbstractContainerMenu::handleDestroy()
 	g_savedInventoryCursorPos.y = m_pointerPos.y;
 	g_savedInventoryCursorPos.hasSavedPos = true;
 
+	g_KBMInput.SetScreenCursorHidden(false);
 	g_KBMInput.SetCursorHiddenForUI(false);
 #endif
 
@@ -82,6 +83,7 @@ void UIScene_AbstractContainerMenu::InitDataAssociations(int iPad, AbstractConta
 void UIScene_AbstractContainerMenu::PlatformInitialize(int iPad, int startIndex)
 {
 #ifdef _WINDOWS64
+	g_KBMInput.SetScreenCursorHidden(true);
 	g_KBMInput.SetCursorHiddenForUI(true);
 #endif
 

@@ -1457,7 +1457,7 @@ void Minecraft::run_middle()
 					{
 						if(InputManager.ButtonDown(i, MINECRAFT_ACTION_SNEAK_TOGGLE))			localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_SNEAK_TOGGLE;
 #ifdef _WINDOWS64
-						if(i == 0 && g_KBMInput.IsKeyDown(KeyboardMouseInput::KEY_SNEAK))		localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_SNEAK_TOGGLE;
+						if(i == 0 && g_KBMInput.IsKBMActive() && g_KBMInput.IsKeyDown(KeyboardMouseInput::KEY_SNEAK))		localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_SNEAK_TOGGLE;
 #endif
 					}
 					else
@@ -1470,21 +1470,40 @@ void Minecraft::run_middle()
 #ifdef _WINDOWS64
 					if (i == 0)
 					{
-						if(g_KBMInput.IsMouseButtonPressed(KeyboardMouseInput::MOUSE_LEFT))
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_ACTION;
+						if (g_KBMInput.IsKBMActive())
+						{
+							if(g_KBMInput.IsMouseButtonPressed(KeyboardMouseInput::MOUSE_LEFT))
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_ACTION;
 
-						if(g_KBMInput.IsMouseButtonPressed(KeyboardMouseInput::MOUSE_RIGHT))
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_USE;
+							if(g_KBMInput.IsMouseButtonPressed(KeyboardMouseInput::MOUSE_RIGHT))
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_USE;
 
-						if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_INVENTORY))
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_INVENTORY;
+							if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_INVENTORY))
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_INVENTORY;
 
-						if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_DROP))
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_DROP;
+							if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_DROP))
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_DROP;
 
-						if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_CRAFTING) || g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_CRAFTING_ALT))
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_CRAFTING;
+							if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_CRAFTING) || g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_CRAFTING_ALT))
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_CRAFTING;
 
+							int wheel = g_KBMInput.GetMouseWheel();
+							if (wheel > 0)
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_RIGHT_SCROLL;
+							else if (wheel < 0)
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_LEFT_SCROLL;
+
+							for (int slot = 0; slot < 9; slot++)
+							{
+								if (g_KBMInput.IsKeyPressed('1' + slot))
+								{
+									if (localplayers[i]->inventory)
+										localplayers[i]->inventory->selected = slot;
+								}
+							}
+						}
+
+						// Utility keys always work regardless of KBM active state
 						if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_PAUSE))
 						{
 							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_PAUSEMENU;
@@ -1503,21 +1522,6 @@ void Minecraft::run_middle()
 						if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_FPS_TOGGLE))
 						{
 							showFpsCounter = !showFpsCounter;
-						}
-
-						int wheel = g_KBMInput.GetMouseWheel();
-						if (wheel > 0)
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_RIGHT_SCROLL;
-						else if (wheel < 0)
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_LEFT_SCROLL;
-
-						for (int slot = 0; slot < 9; slot++)
-						{
-							if (g_KBMInput.IsKeyPressed('1' + slot))
-							{
-								if (localplayers[i]->inventory)
-									localplayers[i]->inventory->selected = slot;
-							}
 						}
 					}
 #endif
@@ -3267,7 +3271,7 @@ void Minecraft::tick(bool bFirst, bool bUpdateTextures)
 			wheel = -1;
 		}
 #ifdef _WINDOWS64
-		if (iPad == 0 && wheel == 0)
+		if (iPad == 0 && wheel == 0 && g_KBMInput.IsKBMActive())
 		{
 			int mw = g_KBMInput.GetMouseWheel();
 			if (mw > 0) wheel = -1;
@@ -3297,7 +3301,7 @@ void Minecraft::tick(bool bFirst, bool bUpdateTextures)
 		}
 
 #ifdef _WINDOWS64 // allows for the player to get the block they are looking at in creative by middle clicking.
-		if (iPad == 0 && player->abilities.instabuild && g_KBMInput.IsMouseButtonPressed(KeyboardMouseInput::MOUSE_MIDDLE) && hitResult != NULL && (hitResult->type == HitResult::TILE || hitResult->type == HitResult::ENTITY))
+		if (iPad == 0 && g_KBMInput.IsKBMActive() && player->abilities.instabuild && g_KBMInput.IsMouseButtonPressed(KeyboardMouseInput::MOUSE_MIDDLE) && hitResult != NULL && (hitResult->type == HitResult::TILE || hitResult->type == HitResult::ENTITY))
 		{
 			//printf("MIDDLE CLICK TEST!!"); // windermed was here.
 			int cloneId = -1;
@@ -3390,7 +3394,7 @@ void Minecraft::tick(bool bFirst, bool bUpdateTextures)
 			}
 
 #ifdef _WINDOWS64
-			bool actionHeld = InputManager.ButtonDown(iPad, MINECRAFT_ACTION_ACTION) || (iPad == 0 && g_KBMInput.IsMouseButtonDown(KeyboardMouseInput::MOUSE_LEFT));
+			bool actionHeld = InputManager.ButtonDown(iPad, MINECRAFT_ACTION_ACTION) || (iPad == 0 && g_KBMInput.IsKBMActive() && g_KBMInput.IsMouseButtonDown(KeyboardMouseInput::MOUSE_LEFT));
 #else
 			bool actionHeld = InputManager.ButtonDown(iPad, MINECRAFT_ACTION_ACTION);
 #endif
@@ -3421,7 +3425,7 @@ void Minecraft::tick(bool bFirst, bool bUpdateTextures)
 		}
 		*/
 #ifdef _WINDOWS64
-		bool useHeld = InputManager.ButtonDown(iPad, MINECRAFT_ACTION_USE) || (iPad == 0 && g_KBMInput.IsMouseButtonDown(KeyboardMouseInput::MOUSE_RIGHT));
+		bool useHeld = InputManager.ButtonDown(iPad, MINECRAFT_ACTION_USE) || (iPad == 0 && g_KBMInput.IsKBMActive() && g_KBMInput.IsMouseButtonDown(KeyboardMouseInput::MOUSE_RIGHT));
 #else
 		bool useHeld = InputManager.ButtonDown(iPad, MINECRAFT_ACTION_USE);
 #endif

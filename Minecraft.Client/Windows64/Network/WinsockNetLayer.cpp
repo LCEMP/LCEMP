@@ -213,6 +213,14 @@ bool WinsockNetLayer::JoinGame(const char *ip, int port)
 
 	s_isHost = false;
 	s_hostSmallId = 0;
+	s_connected = false;
+	s_active = false;
+
+	if (s_hostConnectionSocket != INVALID_SOCKET)
+	{
+		closesocket(s_hostConnectionSocket);
+		s_hostConnectionSocket = INVALID_SOCKET;
+	}
 
 	struct addrinfo hints = {};
 	struct addrinfo *result = NULL;
@@ -231,37 +239,55 @@ bool WinsockNetLayer::JoinGame(const char *ip, int port)
 		return false;
 	}
 
-	s_hostConnectionSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-	if (s_hostConnectionSocket == INVALID_SOCKET)
+	bool connected = false;
+	BYTE assignedSmallId = 0;
+	const int maxAttempts = 12;
+
+	for (int attempt = 0; attempt < maxAttempts; ++attempt)
 	{
-		app.DebugPrintf("socket() failed: %d\n", WSAGetLastError());
-		freeaddrinfo(result);
-		return false;
+		s_hostConnectionSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+		if (s_hostConnectionSocket == INVALID_SOCKET)
+		{
+			app.DebugPrintf("socket() failed: %d\n", WSAGetLastError());
+			break;
+		}
+
+		int noDelay = 1;
+		setsockopt(s_hostConnectionSocket, IPPROTO_TCP, TCP_NODELAY, (const char *)&noDelay, sizeof(noDelay));
+
+		iResult = connect(s_hostConnectionSocket, result->ai_addr, (int)result->ai_addrlen);
+		if (iResult == SOCKET_ERROR)
+		{
+			int err = WSAGetLastError();
+			app.DebugPrintf("connect() to %s:%d failed (attempt %d/%d): %d\n", ip, port, attempt + 1, maxAttempts, err);
+			closesocket(s_hostConnectionSocket);
+			s_hostConnectionSocket = INVALID_SOCKET;
+			Sleep(200);
+			continue;
+		}
+
+		BYTE assignBuf[1];
+		int bytesRecv = recv(s_hostConnectionSocket, (char *)assignBuf, 1, 0);
+		if (bytesRecv != 1)
+		{
+			app.DebugPrintf("Failed to receive small ID assignment from host (attempt %d/%d)\n", attempt + 1, maxAttempts);
+			closesocket(s_hostConnectionSocket);
+			s_hostConnectionSocket = INVALID_SOCKET;
+			Sleep(200);
+			continue;
+		}
+
+		assignedSmallId = assignBuf[0];
+		connected = true;
+		break;
 	}
-
-	int noDelay = 1;
-	setsockopt(s_hostConnectionSocket, IPPROTO_TCP, TCP_NODELAY, (const char *)&noDelay, sizeof(noDelay));
-
-	iResult = connect(s_hostConnectionSocket, result->ai_addr, (int)result->ai_addrlen);
 	freeaddrinfo(result);
-	if (iResult == SOCKET_ERROR)
-	{
-		app.DebugPrintf("connect() to %s:%d failed: %d\n", ip, port, WSAGetLastError());
-		closesocket(s_hostConnectionSocket);
-		s_hostConnectionSocket = INVALID_SOCKET;
-		return false;
-	}
 
-	BYTE assignBuf[1];
-	int bytesRecv = recv(s_hostConnectionSocket, (char *)assignBuf, 1, 0);
-	if (bytesRecv != 1)
+	if (!connected)
 	{
-		app.DebugPrintf("Failed to receive small ID assignment from host\n");
-		closesocket(s_hostConnectionSocket);
-		s_hostConnectionSocket = INVALID_SOCKET;
 		return false;
 	}
-	s_localSmallId = assignBuf[0];
+	s_localSmallId = assignedSmallId;
 
 	app.DebugPrintf("Win64 LAN: Connected to %s:%d, assigned smallId=%d\n", ip, port, s_localSmallId);
 
@@ -479,7 +505,8 @@ DWORD WINAPI WinsockNetLayer::RecvThreadProc(LPVOID param)
 	BYTE clientSmallId = s_connections[connIdx].smallId;
 	LeaveCriticalSection(&s_connectionsLock);
 
-	BYTE *recvBuf = new BYTE[WIN64_NET_RECV_BUFFER_SIZE];
+	std::vector<BYTE> recvBuf;
+	recvBuf.resize(WIN64_NET_RECV_BUFFER_SIZE);
 
 	while (s_active)
 	{
@@ -490,24 +517,35 @@ DWORD WINAPI WinsockNetLayer::RecvThreadProc(LPVOID param)
 			break;
 		}
 
-		int packetSize = (header[0] << 24) | (header[1] << 16) | (header[2] << 8) | header[3];
+		int packetSize =
+			((uint32_t)header[0] << 24) |
+			((uint32_t)header[1] << 16) |
+			((uint32_t)header[2] << 8) |
+			((uint32_t)header[3]);
 
-		if (packetSize <= 0 || packetSize > WIN64_NET_RECV_BUFFER_SIZE)
+		if (packetSize <= 0 || packetSize > WIN64_NET_MAX_PACKET_SIZE)
 		{
-			app.DebugPrintf("Win64 LAN: Invalid packet size %d from client smallId=%d\n", packetSize, clientSmallId);
+			app.DebugPrintf("Win64 LAN: Invalid packet size %d from client smallId=%d (max=%d)\n",
+				packetSize,
+				clientSmallId,
+				(int)WIN64_NET_MAX_PACKET_SIZE);
 			break;
 		}
 
-		if (!RecvExact(sock, recvBuf, packetSize))
+		if ((int)recvBuf.size() < packetSize)
+		{
+			recvBuf.resize(packetSize);
+			app.DebugPrintf("Win64 LAN: Resized host recv buffer to %d bytes for client smallId=%d\n", packetSize, clientSmallId);
+		}
+
+		if (!RecvExact(sock, &recvBuf[0], packetSize))
 		{
 			app.DebugPrintf("Win64 LAN: Client smallId=%d disconnected (body)\n", clientSmallId);
 			break;
 		}
 
-		HandleDataReceived(clientSmallId, s_hostSmallId, recvBuf, packetSize);
+		HandleDataReceived(clientSmallId, s_hostSmallId, &recvBuf[0], packetSize);
 	}
-
-	delete[] recvBuf;
 
 	EnterCriticalSection(&s_connectionsLock);
 	for (size_t i = 0; i < s_connections.size(); i++)
@@ -515,8 +553,11 @@ DWORD WINAPI WinsockNetLayer::RecvThreadProc(LPVOID param)
 		if (s_connections[i].smallId == clientSmallId)
 		{
 			s_connections[i].active = false;
-			closesocket(s_connections[i].tcpSocket);
-			s_connections[i].tcpSocket = INVALID_SOCKET;
+			if (s_connections[i].tcpSocket != INVALID_SOCKET)
+			{
+				closesocket(s_connections[i].tcpSocket);
+				s_connections[i].tcpSocket = INVALID_SOCKET;
+			}
 			break;
 		}
 	}
@@ -550,9 +591,26 @@ void WinsockNetLayer::PushFreeSmallId(BYTE smallId)
 	LeaveCriticalSection(&s_freeSmallIdLock);
 }
 
+void WinsockNetLayer::CloseConnectionBySmallId(BYTE smallId)
+{
+	EnterCriticalSection(&s_connectionsLock);
+	for (size_t i = 0; i < s_connections.size(); i++)
+	{
+		if (s_connections[i].smallId == smallId && s_connections[i].active && s_connections[i].tcpSocket != INVALID_SOCKET)
+		{
+			closesocket(s_connections[i].tcpSocket);
+			s_connections[i].tcpSocket = INVALID_SOCKET;
+			app.DebugPrintf("Win64 LAN: Force-closed TCP connection for smallId=%d\n", smallId);
+			break;
+		}
+	}
+	LeaveCriticalSection(&s_connectionsLock);
+}
+
 DWORD WINAPI WinsockNetLayer::ClientRecvThreadProc(LPVOID param)
 {
-	BYTE *recvBuf = new BYTE[WIN64_NET_RECV_BUFFER_SIZE];
+	std::vector<BYTE> recvBuf;
+	recvBuf.resize(WIN64_NET_RECV_BUFFER_SIZE);
 
 	while (s_active && s_hostConnectionSocket != INVALID_SOCKET)
 	{
@@ -565,22 +623,28 @@ DWORD WINAPI WinsockNetLayer::ClientRecvThreadProc(LPVOID param)
 
 		int packetSize = (header[0] << 24) | (header[1] << 16) | (header[2] << 8) | header[3];
 
-		if (packetSize <= 0 || packetSize > WIN64_NET_RECV_BUFFER_SIZE)
+		if (packetSize <= 0 || packetSize > WIN64_NET_MAX_PACKET_SIZE)
 		{
-			app.DebugPrintf("Win64 LAN: Invalid packet size %d from host\n", packetSize);
+			app.DebugPrintf("Win64 LAN: Invalid packet size %d from host (max=%d)\n",
+				packetSize,
+				(int)WIN64_NET_MAX_PACKET_SIZE);
 			break;
 		}
 
-		if (!RecvExact(s_hostConnectionSocket, recvBuf, packetSize))
+		if ((int)recvBuf.size() < packetSize)
+		{
+			recvBuf.resize(packetSize);
+			app.DebugPrintf("Win64 LAN: Resized client recv buffer to %d bytes\n", packetSize);
+		}
+
+		if (!RecvExact(s_hostConnectionSocket, &recvBuf[0], packetSize))
 		{
 			app.DebugPrintf("Win64 LAN: Disconnected from host (body)\n");
 			break;
 		}
 
-		HandleDataReceived(s_hostSmallId, s_localSmallId, recvBuf, packetSize);
+		HandleDataReceived(s_hostSmallId, s_localSmallId, &recvBuf[0], packetSize);
 	}
-
-	delete[] recvBuf;
 
 	s_connected = false;
 	return 0;

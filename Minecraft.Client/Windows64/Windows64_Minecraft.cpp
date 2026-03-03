@@ -1185,6 +1185,33 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		PIXBeginNamedEvent(0,"Input manager tick");
 		InputManager.Tick();
 
+		// detect input mode
+		if (InputManager.IsPadConnected(0))
+		{
+			bool controllerUsed = InputManager.ButtonPressed(0) ||
+				InputManager.GetJoypadStick_LX(0, false) != 0.0f ||
+				InputManager.GetJoypadStick_LY(0, false) != 0.0f ||
+				InputManager.GetJoypadStick_RX(0, false) != 0.0f ||
+				InputManager.GetJoypadStick_RY(0, false) != 0.0f;
+
+			if (controllerUsed)
+				g_KBMInput.SetKBMActive(false);
+			else if (g_KBMInput.HasAnyInput())
+				g_KBMInput.SetKBMActive(true);
+		}
+		else
+		{
+			g_KBMInput.SetKBMActive(true);
+		}
+
+		if (!g_KBMInput.IsMouseGrabbed())
+		{
+			if (!g_KBMInput.IsKBMActive())
+				g_KBMInput.SetCursorHiddenForUI(true);
+			else if (!g_KBMInput.IsScreenCursorHidden())
+				g_KBMInput.SetCursorHiddenForUI(false);
+		}
+
 		PIXEndNamedEvent();
 		PIXBeginNamedEvent(0,"Profile manager tick");
 		//		ProfileManager.Tick();

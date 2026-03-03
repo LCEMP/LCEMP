@@ -240,6 +240,28 @@ void CPlatformNetworkManagerStub::DoWork()
 					IQNet::s_playerCount--;
 			}
 		}
+
+		for (int i = 1; i < MINECRAFT_NET_MAX_PLAYERS; i++)
+		{
+			IQNetPlayer *qp = &IQNet::m_player[i];
+			if (qp->GetCustomDataValue() == 0)
+				continue;
+			INetworkPlayer *np = (INetworkPlayer *)qp->GetCustomDataValue();
+			Socket *sock = np->GetSocket();
+			if (sock != NULL && sock->isClosing())
+			{
+				WinsockNetLayer::CloseConnectionBySmallId((BYTE)i);
+			}
+		}
+	}
+	if (_iQNetStubState == QNET_STATE_GAME_PLAY && !m_pIQNet->IsHost())
+	{
+		if (!WinsockNetLayer::IsConnected() && !g_NetworkManager.IsLeavingGame())
+		{
+			if (app.GetDisconnectReason() == DisconnectPacket::eDisconnect_None)
+				app.SetDisconnectReason(DisconnectPacket::eDisconnect_Quitting);
+			app.SetAction(ProfileManager.GetPrimaryPad(), eAppAction_ExitWorld, (void *)TRUE);
+		}
 	}
 #endif
 }
@@ -811,7 +833,21 @@ INetworkPlayer * CPlatformNetworkManagerStub::GetPlayerByXuid(PlayerUID xuid)
 
 INetworkPlayer * CPlatformNetworkManagerStub::GetPlayerBySmallId(unsigned char smallId)
 {
-	return getNetworkPlayer(m_pIQNet->GetPlayerBySmallId(smallId));
+	IQNetPlayer *qnetPlayer = m_pIQNet->GetPlayerBySmallId(smallId);
+	if (qnetPlayer == NULL)
+		return NULL;
+
+	INetworkPlayer *networkPlayer = getNetworkPlayer(qnetPlayer);
+#ifdef _WINDOWS64
+	if (networkPlayer == NULL && smallId != 0 && !m_pIQNet->IsHost())
+	{
+		qnetPlayer->m_isRemote = true;
+		qnetPlayer->m_isHostPlayer = false;
+		NotifyPlayerJoined(qnetPlayer);
+		networkPlayer = getNetworkPlayer(qnetPlayer);
+	}
+#endif
+	return networkPlayer;
 }
 
 INetworkPlayer *CPlatformNetworkManagerStub::GetHostPlayer()

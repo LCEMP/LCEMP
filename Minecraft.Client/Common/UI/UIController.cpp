@@ -691,7 +691,7 @@ void UIController::tickInput()
 #endif
 		{
 #ifdef _WINDOWS64
-			if (!g_KBMInput.IsMouseGrabbed())
+			if (!g_KBMInput.IsMouseGrabbed() && g_KBMInput.IsKBMActive())
 			{
 				UIScene *pScene = NULL;
 				for (int grp = 0; grp < eUIGroup_COUNT && !pScene; ++grp)
@@ -729,20 +729,23 @@ void UIController::tickInput()
 					S32 numFocusables = 0;
 					IggyPlayerGetFocusableObjects(movie, &currentFocus, focusables, 64, &numFocusables);
 
-					IggyFocusHandle hitObject = IGGY_FOCUS_NULL;
-					for (S32 i = 0; i < numFocusables; ++i)
+					if (numFocusables > 0 && numFocusables <= 64)
 					{
-						if (mouseX >= focusables[i].x0 && mouseX <= focusables[i].x1 &&
-							mouseY >= focusables[i].y0 && mouseY <= focusables[i].y1)
+						IggyFocusHandle hitObject = IGGY_FOCUS_NULL;
+						for (S32 i = 0; i < numFocusables; ++i)
 						{
-							hitObject = focusables[i].object;
-							break;
+							if (mouseX >= focusables[i].x0 && mouseX <= focusables[i].x1 &&
+								mouseY >= focusables[i].y0 && mouseY <= focusables[i].y1)
+							{
+								hitObject = focusables[i].object;
+								break;
+							}
 						}
-					}
 
-					if (hitObject != IGGY_FOCUS_NULL && hitObject != currentFocus)
-					{
-						IggyPlayerSetFocusRS(movie, hitObject, 0);
+						if (hitObject != IGGY_FOCUS_NULL && hitObject != currentFocus)
+						{
+							IggyPlayerSetFocusRS(movie, hitObject, 0);
+						}
 					}
 
 					if (g_KBMInput.IsMouseButtonDown(0) || g_KBMInput.IsMouseButtonPressed(0))
