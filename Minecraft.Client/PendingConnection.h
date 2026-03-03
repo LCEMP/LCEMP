@@ -11,7 +11,11 @@ class PendingConnection : public PacketListener
 {
 private:
 	static const int FAKE_LAG = 0;
+#ifdef _WINDOWS64
+    static const int MAX_TICKS_BEFORE_LOGIN = 20 * 5;
+#else
     static const int MAX_TICKS_BEFORE_LOGIN = 20 * 30;
+#endif
 
 //    public static Logger logger = Logger.getLogger("Minecraft");
     static Random *random;

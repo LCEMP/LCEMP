@@ -168,7 +168,7 @@ void PIXSetMarkerDeprecated(int a, char *b, ...) {}
 
 bool IsEqualXUID(PlayerUID a, PlayerUID b)
 {
-#if defined(__PS3__) || defined(__ORBIS__) || defined (__PSVITA__) || defined(_DURANGO) || defined(_WINDOWS64)
+#if defined(__PS3__) || defined(__ORBIS__) || defined (__PSVITA__) || defined(_DURANGO)
 	return (a == b);
 #else
 	return false;
@@ -232,17 +232,13 @@ void Win64_SetupRemoteQNetPlayer(IQNetPlayer *player, BYTE smallId, bool isHost,
 		IQNet::s_playerCount = smallId + 1;
 }
 
-static bool Win64_IsActivePlayer(IQNetPlayer *p, DWORD index);
-
 HRESULT IQNet::AddLocalPlayerByUserIndex(DWORD dwUserIndex){ return S_OK; }
 IQNetPlayer *IQNet::GetHostPlayer() { return &m_player[0]; }
 IQNetPlayer *IQNet::GetLocalPlayerByUserIndex(DWORD dwUserIndex)
 {
 	if (s_isHosting)
 	{
-		if (dwUserIndex < MINECRAFT_NET_MAX_PLAYERS &&
-			!m_player[dwUserIndex].m_isRemote &&
-			Win64_IsActivePlayer(&m_player[dwUserIndex], dwUserIndex))
+		if (dwUserIndex < MINECRAFT_NET_MAX_PLAYERS && !m_player[dwUserIndex].m_isRemote)
 			return &m_player[dwUserIndex];
 		return NULL;
 	}
@@ -250,15 +246,22 @@ IQNetPlayer *IQNet::GetLocalPlayerByUserIndex(DWORD dwUserIndex)
 		return NULL;
 	for (DWORD i = 0; i < s_playerCount; i++)
 	{
-		if (!m_player[i].m_isRemote && Win64_IsActivePlayer(&m_player[i], i))
-			return &m_player[i];
+		if (!m_player[i].m_isRemote)
+		{
+			// Require a valid smallId and attached network player to avoid
+			// returning unused slots on the client.
+			if (m_player[i].m_smallId == i && m_player[i].GetCustomDataValue() != 0)
+				return &m_player[i];
+		}
 	}
 	return NULL;
 }
 static bool Win64_IsActivePlayer(IQNetPlayer *p, DWORD index)
 {
 	if (index == 0) return true;
-	return (p->GetCustomDataValue() != 0);
+	// Use smallId as the source of truth for activity; custom data can be cleared
+	// while the socket still needs to resolve the player.
+	return (p->m_smallId == index);
 }
 
 IQNetPlayer *IQNet::GetPlayerByIndex(DWORD dwPlayerIndex)
@@ -276,21 +279,21 @@ IQNetPlayer *IQNet::GetPlayerByIndex(DWORD dwPlayerIndex)
 }
 IQNetPlayer *IQNet::GetPlayerBySmallId(BYTE SmallId)
 {
-	if (SmallId >= MINECRAFT_NET_MAX_PLAYERS)
-		return NULL;
-
-	m_player[SmallId].m_smallId = SmallId;
-	if (SmallId >= s_playerCount)
-		s_playerCount = SmallId + 1;
-	return &m_player[SmallId];
+	if (SmallId < MINECRAFT_NET_MAX_PLAYERS && m_player[SmallId].m_smallId == SmallId)
+		return &m_player[SmallId];
+	for (DWORD i = 0; i < s_playerCount; i++)
+	{
+		if (m_player[i].m_smallId == SmallId && Win64_IsActivePlayer(&m_player[i], i)) return &m_player[i];
+	}
+	return NULL;
 }
 IQNetPlayer *IQNet::GetPlayerByXuid(PlayerUID xuid)
 {
-	for (DWORD i = 0; i < MINECRAFT_NET_MAX_PLAYERS; i++)
+	for (DWORD i = 0; i < s_playerCount; i++)
 	{
 		if (Win64_IsActivePlayer(&m_player[i], i) && m_player[i].GetXuid() == xuid) return &m_player[i];
 	}
-	return NULL;
+	return &m_player[0];
 }
 DWORD IQNet::GetPlayerCount()
 {
@@ -305,28 +308,15 @@ QNET_STATE IQNet::GetState() { return _iQNetStubState; }
 bool IQNet::IsHost() { return s_isHosting; }
 HRESULT IQNet::JoinGameFromInviteInfo(DWORD dwUserIndex, DWORD dwUserMask, const INVITE_INFO *pInviteInfo) { return S_OK; }
 void IQNet::HostGame() { _iQNetStubState = QNET_STATE_SESSION_STARTING; s_isHosting = true; }
-void IQNet::ClientJoinGame()
-{
-	_iQNetStubState = QNET_STATE_SESSION_STARTING;
-	s_isHosting = false;
-
-	for (int i = 0; i < MINECRAFT_NET_MAX_PLAYERS; i++)
-	{
-		m_player[i].m_smallId = (BYTE)i;
-		m_player[i].m_isRemote = true;
-		m_player[i].m_isHostPlayer = false;
-		m_player[i].m_gamertag[0] = 0;
-		m_player[i].SetCustomDataValue(0);
-	}
-}
+void IQNet::ClientJoinGame() { _iQNetStubState = QNET_STATE_SESSION_STARTING; s_isHosting = false; }
 void IQNet::EndGame()
 {
 	_iQNetStubState = QNET_STATE_IDLE;
 	s_isHosting = false;
 	s_playerCount = 1;
-	for (int i = 0; i < MINECRAFT_NET_MAX_PLAYERS; i++)
+	for (int i = 1; i < MINECRAFT_NET_MAX_PLAYERS; i++)
 	{
-		m_player[i].m_smallId = (BYTE)i;
+		m_player[i].m_smallId = 0;
 		m_player[i].m_isRemote = false;
 		m_player[i].m_isHostPlayer = false;
 		m_player[i].m_gamertag[0] = 0;

@@ -289,11 +289,24 @@ bool	CGameNetworkManager::StartNetworkGame(Minecraft *minecraft, LPVOID lpParame
 	}
 	else
 	{
-		INetworkPlayer *pNetworkPlayer = g_NetworkManager.GetLocalPlayerByUserIndex(ProfileManager.GetLockedProfile());
+		int lockedProfile = ProfileManager.GetLockedProfile();
+		if (lockedProfile < 0 || lockedProfile >= XUSER_MAX_COUNT)
+			lockedProfile = ProfileManager.GetPrimaryPad();
+		if (lockedProfile < 0 || lockedProfile >= XUSER_MAX_COUNT)
+			lockedProfile = 0;
+
+		INetworkPlayer *pNetworkPlayer = g_NetworkManager.GetLocalPlayerByUserIndex(lockedProfile);
+		if(pNetworkPlayer == NULL)
+		{
+			// Fallback to primary pad if the locked profile didn't resolve.
+			int primary = ProfileManager.GetPrimaryPad();
+			if (primary >= 0 && primary < XUSER_MAX_COUNT)
+				pNetworkPlayer = g_NetworkManager.GetLocalPlayerByUserIndex(primary);
+		}
 		if(pNetworkPlayer == NULL)
 		{
 			MinecraftServer::HaltServer();
-			app.DebugPrintf("%d\n",ProfileManager.GetLockedProfile());
+			app.DebugPrintf("Join failed: no local player for locked=%d primary=%d\n", lockedProfile, ProfileManager.GetPrimaryPad());
 			// If the player is NULL here then something went wrong in the session setup, and continuing will end up in a crash
 			return false;
 		}

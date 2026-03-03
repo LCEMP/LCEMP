@@ -226,7 +226,14 @@ void CPlatformNetworkManagerStub::DoWork()
 		BYTE disconnectedSmallId;
 		while (WinsockNetLayer::PopDisconnectedSmallId(&disconnectedSmallId))
 		{
+			// Always free the smallId so a failed/aborted join doesn't permanently consume a slot.
+			if (disconnectedSmallId != 0)
+				WinsockNetLayer::PushFreeSmallId(disconnectedSmallId);
+
 			IQNetPlayer *qnetPlayer = m_pIQNet->GetPlayerBySmallId(disconnectedSmallId);
+			if (qnetPlayer == NULL && disconnectedSmallId < MINECRAFT_NET_MAX_PLAYERS)
+				qnetPlayer = &IQNet::m_player[disconnectedSmallId];
+
 			if (qnetPlayer != NULL && qnetPlayer->m_smallId == disconnectedSmallId)
 			{
 				NotifyPlayerLeaving(qnetPlayer);
@@ -235,32 +242,19 @@ void CPlatformNetworkManagerStub::DoWork()
 				qnetPlayer->m_isHostPlayer = false;
 				qnetPlayer->m_gamertag[0] = 0;
 				qnetPlayer->SetCustomDataValue(0);
-				WinsockNetLayer::PushFreeSmallId(disconnectedSmallId);
-				if (IQNet::s_playerCount > 1)
-					IQNet::s_playerCount--;
 			}
-		}
 
-		for (int i = 1; i < MINECRAFT_NET_MAX_PLAYERS; i++)
-		{
-			IQNetPlayer *qp = &IQNet::m_player[i];
-			if (qp->GetCustomDataValue() == 0)
-				continue;
-			INetworkPlayer *np = (INetworkPlayer *)qp->GetCustomDataValue();
-			Socket *sock = np->GetSocket();
-			if (sock != NULL && sock->isClosing())
+			// Recompute high-water mark so GetPlayerBySmallId doesn't miss active players.
+			DWORD newCount = 1;
+			for (int i = MINECRAFT_NET_MAX_PLAYERS - 1; i >= 1; --i)
 			{
-				WinsockNetLayer::CloseConnectionBySmallId((BYTE)i);
+				if (IQNet::m_player[i].m_smallId == i)
+				{
+					newCount = i + 1;
+					break;
+				}
 			}
-		}
-	}
-	if (_iQNetStubState == QNET_STATE_GAME_PLAY && !m_pIQNet->IsHost())
-	{
-		if (!WinsockNetLayer::IsConnected() && !g_NetworkManager.IsLeavingGame())
-		{
-			if (app.GetDisconnectReason() == DisconnectPacket::eDisconnect_None)
-				app.SetDisconnectReason(DisconnectPacket::eDisconnect_Quitting);
-			app.SetAction(ProfileManager.GetPrimaryPad(), eAppAction_ExitWorld, (void *)TRUE);
+			IQNet::s_playerCount = newCount;
 		}
 	}
 #endif
@@ -834,20 +828,9 @@ INetworkPlayer * CPlatformNetworkManagerStub::GetPlayerByXuid(PlayerUID xuid)
 INetworkPlayer * CPlatformNetworkManagerStub::GetPlayerBySmallId(unsigned char smallId)
 {
 	IQNetPlayer *qnetPlayer = m_pIQNet->GetPlayerBySmallId(smallId);
-	if (qnetPlayer == NULL)
-		return NULL;
-
-	INetworkPlayer *networkPlayer = getNetworkPlayer(qnetPlayer);
-#ifdef _WINDOWS64
-	if (networkPlayer == NULL && smallId != 0 && !m_pIQNet->IsHost())
-	{
-		qnetPlayer->m_isRemote = true;
-		qnetPlayer->m_isHostPlayer = false;
-		NotifyPlayerJoined(qnetPlayer);
-		networkPlayer = getNetworkPlayer(qnetPlayer);
-	}
-#endif
-	return networkPlayer;
+	if (qnetPlayer == NULL && smallId < MINECRAFT_NET_MAX_PLAYERS)
+		qnetPlayer = &IQNet::m_player[smallId];
+	return getNetworkPlayer(qnetPlayer);
 }
 
 INetworkPlayer *CPlatformNetworkManagerStub::GetHostPlayer()
