@@ -1026,18 +1026,18 @@ void UIController::handleKeyPress(unsigned int iPad, unsigned int key)
 		int vk = 0;
 		switch (key)
 		{
-		case ACTION_MENU_OK:    case ACTION_MENU_A: vk = VK_RETURN; break;
-		case ACTION_MENU_CANCEL: case ACTION_MENU_B: vk = VK_ESCAPE; break;
-		case ACTION_MENU_UP:    vk = VK_UP;     break;
-		case ACTION_MENU_DOWN:  vk = VK_DOWN;   break;
-		case ACTION_MENU_LEFT:  vk = VK_LEFT;   break;
-		case ACTION_MENU_RIGHT: vk = VK_RIGHT;  break;
-		case ACTION_MENU_X:     vk = 'E';       break;
-		case ACTION_MENU_Y:     vk = VK_TAB;    break;
-		case ACTION_MENU_LEFT_SCROLL:  vk = 'Q'; break;
-		case ACTION_MENU_RIGHT_SCROLL: vk = 'R'; break;
-		case ACTION_MENU_PAGEUP:   vk = VK_PRIOR; break;
-		case ACTION_MENU_PAGEDOWN: vk = VK_NEXT;  break;
+		case ACTION_MENU_OK:    case ACTION_MENU_A: vk = KeyboardMouseInput::KEY_MENU_A; break;
+		case ACTION_MENU_CANCEL: case ACTION_MENU_B: vk = KeyboardMouseInput::KEY_MENU_B; break;
+		case ACTION_MENU_UP:    vk = KeyboardMouseInput::KEY_MENU_UP; break;
+		case ACTION_MENU_DOWN:  vk = KeyboardMouseInput::KEY_MENU_DOWN; break;
+		case ACTION_MENU_LEFT:  vk = KeyboardMouseInput::KEY_MENU_LEFT; break;
+		case ACTION_MENU_RIGHT: vk = KeyboardMouseInput::KEY_MENU_RIGHT; break;
+		case ACTION_MENU_X:     vk = KeyboardMouseInput::KEY_MENU_X; break;
+		case ACTION_MENU_Y:     vk = KeyboardMouseInput::KEY_MENU_Y; break;
+		case ACTION_MENU_LEFT_SCROLL:  vk = KeyboardMouseInput::KEY_MENU_LEFT_SCROLL; break;
+		case ACTION_MENU_RIGHT_SCROLL: vk = KeyboardMouseInput::KEY_MENU_RIGHT_SCROLL; break;
+		case ACTION_MENU_PAGEUP:   vk = KeyboardMouseInput::KEY_MENU_PAGEUP; break;
+		case ACTION_MENU_PAGEDOWN: vk = KeyboardMouseInput::KEY_MENU_PAGEDOWN; break;
 		}
 		if (vk != 0)
 		{
