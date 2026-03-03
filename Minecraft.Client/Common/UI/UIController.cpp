@@ -691,7 +691,7 @@ void UIController::tickInput()
 #endif
 		{
 #ifdef _WINDOWS64
-			if (!g_KBMInput.IsMouseGrabbed())
+			if (!g_KBMInput.IsMouseGrabbed() && g_KBMInput.IsKBMActive())
 			{
 				UIScene *pScene = NULL;
 				for (int grp = 0; grp < eUIGroup_COUNT && !pScene; ++grp)

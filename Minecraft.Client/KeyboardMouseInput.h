@@ -69,6 +69,9 @@ public:
 	void SetKBMActive(bool active) { m_kbmActive = active; }
 	bool IsKBMActive() const { return m_kbmActive; }
 
+	void SetScreenCursorHidden(bool hidden) { m_screenWantsCursorHidden = hidden; }
+	bool IsScreenCursorHidden() const { return m_screenWantsCursorHidden; }
+
 	float GetMoveX() const;
 	float GetMoveY() const;
 
@@ -112,6 +115,8 @@ private:
 	bool m_hasInput;
 
 	bool m_kbmActive;
+
+	bool m_screenWantsCursorHidden;
 };
 
 extern KeyboardMouseInput g_KBMInput;

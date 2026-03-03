@@ -1204,6 +1204,14 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 			g_KBMInput.SetKBMActive(true);
 		}
 
+		if (!g_KBMInput.IsMouseGrabbed())
+		{
+			if (!g_KBMInput.IsKBMActive())
+				g_KBMInput.SetCursorHiddenForUI(true);
+			else if (!g_KBMInput.IsScreenCursorHidden())
+				g_KBMInput.SetCursorHiddenForUI(false);
+		}
+
 		PIXEndNamedEvent();
 		PIXBeginNamedEvent(0,"Profile manager tick");
 		//		ProfileManager.Tick();
