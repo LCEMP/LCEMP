@@ -26,6 +26,20 @@ public:
 	static const int KEY_PAUSE = VK_ESCAPE;
 	static const int KEY_THIRD_PERSON = VK_F5;
 	static const int KEY_DEBUG_INFO = VK_F3;
+	static const int KEY_FPS_TOGGLE = VK_F4;
+
+	static const int KEY_MENU_UP = VK_UP;
+	static const int KEY_MENU_DOWN = VK_DOWN;
+	static const int KEY_MENU_LEFT = VK_LEFT;
+	static const int KEY_MENU_RIGHT = VK_RIGHT;
+	static const int KEY_MENU_A = VK_RETURN;
+	static const int KEY_MENU_B = VK_ESCAPE;
+	static const int KEY_MENU_X = 'E';
+	static const int KEY_MENU_Y = VK_TAB;
+	static const int KEY_MENU_LEFT_SCROLL = 'Q';
+	static const int KEY_MENU_RIGHT_SCROLL = 'R';
+	static const int KEY_MENU_PAGEUP = VK_PRIOR;
+	static const int KEY_MENU_PAGEDOWN = VK_NEXT;
 
 	void Init();
 	void Tick();

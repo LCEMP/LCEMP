@@ -1500,7 +1500,7 @@ void Minecraft::run_middle()
 							//localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_RENDER_DEBUG;
 						}
 
-						if(g_KBMInput.IsKeyPressed(VK_F4))
+						if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_FPS_TOGGLE))
 						{
 							showFpsCounter = !showFpsCounter;
 						}
