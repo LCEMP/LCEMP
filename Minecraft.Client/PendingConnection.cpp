@@ -14,6 +14,9 @@
 #include "..\Minecraft.World\net.minecraft.world.item.h"
 #include "..\Minecraft.World\SharedConstants.h"
 #include "Settings.h"
+#ifdef _WINDOWS64
+#include "Windows64\\Network\\WinsockNetLayer.h"
+#endif
 // #ifdef __PS3__
 // #include "PS3\Network\NetworkPlayerSony.h"
 // #endif
@@ -65,6 +68,24 @@ void PendingConnection::disconnect(DisconnectPacket::eDisconnectReason reason)
  //   try {	// 4J - removed try/catch
 //        logger.info("Disconnecting " + getName() + ": " + reason);
 		app.DebugPrintf("Pending connection disconnect: %d\n", reason );
+#ifdef _WINDOWS64
+		// Ensure the underlying Win64 TCP connection is closed so the slot is freed.
+		if (connection != NULL)
+		{
+			Socket *sock = connection->getSocket();
+			INetworkPlayer *np = sock ? sock->getPlayer() : NULL;
+			if (np != NULL && !np->IsLocal())
+			{
+				WinsockNetLayer::DisconnectSmallId(np->GetSmallId());
+			}
+			else if (sock != NULL)
+			{
+				BYTE sid = sock->getSmallId();
+				if (sid != 0)
+					WinsockNetLayer::DisconnectSmallId(sid);
+			}
+		}
+#endif
         connection->send( shared_ptr<DisconnectPacket>( new DisconnectPacket(reason) ) );
         connection->sendAndQuit();
         done = true;
