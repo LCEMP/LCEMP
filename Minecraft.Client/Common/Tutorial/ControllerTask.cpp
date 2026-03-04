@@ -7,6 +7,10 @@
 #include "TutorialConstraints.h"
 #include "ControllerTask.h"
 
+#ifdef _WINDOWS64
+#include "..\..\KeyboardMouseInput.h"
+#endif
+
 ControllerTask::ControllerTask(Tutorial *tutorial, int descriptionId, bool enablePreCompletion, bool showMinimumTime,
 								int mappings[], unsigned int mappingsLength, int iCompletionMaskA[], int iCompletionMaskACount, int iSouthpawMappings[], unsigned int uiSouthpawMappingsCount)
 	: TutorialTask( tutorial, descriptionId, enablePreCompletion, NULL, showMinimumTime )
@@ -66,7 +70,11 @@ bool ControllerTask::isCompleted()
 				}
 				else
 				{
+#ifdef _WINDOWS64
+					bAllComplete = true;
+#else
 					bAllComplete = false;
+#endif
 				}
 			}
 			iCurrent++;
@@ -87,7 +95,11 @@ bool ControllerTask::isCompleted()
 				}
 				else
 				{
+#ifdef _WINDOWS64
+					bAllComplete = true;
+#else
 					bAllComplete = false;
+#endif
 				}
 			}
 			iCurrent++;

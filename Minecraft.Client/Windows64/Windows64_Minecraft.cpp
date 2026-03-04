@@ -37,7 +37,10 @@
 #include "Resource.h"
 #include "..\..\Minecraft.World\compression.h"
 #include "..\..\Minecraft.World\OldChunkStorage.h"
+
 #include "Network\WinsockNetLayer.h"
+
+#include "Windows64_PostProcess.h"
 
 #include "Xbox/resource.h"
 
@@ -343,54 +346,23 @@ ID3D11Device*           g_pd3dDevice = NULL;
 ID3D11DeviceContext*    g_pImmediateContext = NULL;
 IDXGISwapChain*         g_pSwapChain = NULL;
 
-static WORD g_originalGammaRamp[3][256];
-static bool g_gammaRampSaved = false;
+ID3D11RenderTargetView* g_pRenderTargetView = NULL;
+ID3D11DepthStencilView* g_pDepthStencilView = NULL;
+ID3D11Texture2D*		g_pDepthStencilBuffer = NULL;
 
 void Windows64_UpdateGamma(unsigned short usGamma)
 {
-	if (!g_hWnd) return;
-
-	HDC hdc = GetDC(g_hWnd);
-	if (!hdc) return;
-
-	if (!g_gammaRampSaved)
-	{
-		GetDeviceGammaRamp(hdc, g_originalGammaRamp);
-		g_gammaRampSaved = true;
-	}
-
 	float gamma = (float)usGamma / 32768.0f;
-	if (gamma < 0.01f) gamma = 0.01f;
+	if (gamma < 0.0f) gamma = 0.0f;
 	if (gamma > 1.0f) gamma = 1.0f;
 
-	float invGamma = 1.0f / (0.5f + gamma * 0.5f);
-
-	WORD ramp[3][256];
-	for (int i = 0; i < 256; i++)
-	{
-		float normalized = (float)i / 255.0f;
-		float corrected = powf(normalized, invGamma);
-		WORD val = (WORD)(corrected * 65535.0f + 0.5f);
-		ramp[0][i] = val;
-		ramp[1][i] = val;
-		ramp[2][i] = val;
-	}
-
-	SetDeviceGammaRamp(hdc, ramp);
-	ReleaseDC(g_hWnd, hdc);
+	SetGammaValue(0.5f * powf(4.0f, gamma));
 }
 
 void Windows64_RestoreGamma()
 {
-	if (!g_gammaRampSaved || !g_hWnd) return;
-	HDC hdc = GetDC(g_hWnd);
-	if (!hdc) return;
-	SetDeviceGammaRamp(hdc, g_originalGammaRamp);
-	ReleaseDC(g_hWnd, hdc);
+
 }
-ID3D11RenderTargetView* g_pRenderTargetView = NULL;
-ID3D11DepthStencilView* g_pDepthStencilView = NULL;
-ID3D11Texture2D*		g_pDepthStencilBuffer = NULL;
 
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
@@ -712,6 +684,7 @@ app.DebugPrintf("width: %d, height: %d\n", width, height);
 
 	// Create a depth stencil buffer
 	D3D11_TEXTURE2D_DESC descDepth;
+	ZeroMemory(&descDepth, sizeof(descDepth));
 
 	descDepth.Width = width;
 	descDepth.Height = height;
@@ -727,6 +700,7 @@ app.DebugPrintf("width: %d, height: %d\n", width, height);
 	hr = g_pd3dDevice->CreateTexture2D(&descDepth, NULL, &g_pDepthStencilBuffer);
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC descDSView;
+	ZeroMemory(&descDSView, sizeof(descDSView));
 	descDSView.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	descDSView.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	descDSView.Texture2D.MipSlice = 0;
@@ -774,6 +748,8 @@ void CleanupDevice()
 {
 	extern void Windows64_RestoreGamma();
 	Windows64_RestoreGamma();
+
+	CleanupGammaPostProcess();
 
 	if( g_pImmediateContext ) g_pImmediateContext->ClearState();
 
@@ -858,6 +834,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		CleanupDevice();
 		return 0;
 	}
+
+	InitGammaPostProcess();
 
 #if 0
 	// Main message loop
@@ -1185,6 +1163,33 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		PIXBeginNamedEvent(0,"Input manager tick");
 		InputManager.Tick();
 
+		// detect input mode
+		if (InputManager.IsPadConnected(0))
+		{
+			bool controllerUsed = InputManager.ButtonPressed(0) ||
+				InputManager.GetJoypadStick_LX(0, false) != 0.0f ||
+				InputManager.GetJoypadStick_LY(0, false) != 0.0f ||
+				InputManager.GetJoypadStick_RX(0, false) != 0.0f ||
+				InputManager.GetJoypadStick_RY(0, false) != 0.0f;
+
+			if (controllerUsed)
+				g_KBMInput.SetKBMActive(false);
+			else if (g_KBMInput.HasAnyInput())
+				g_KBMInput.SetKBMActive(true);
+		}
+		else
+		{
+			g_KBMInput.SetKBMActive(true);
+		}
+
+		if (!g_KBMInput.IsMouseGrabbed())
+		{
+			if (!g_KBMInput.IsKBMActive())
+				g_KBMInput.SetCursorHiddenForUI(true);
+			else if (!g_KBMInput.IsScreenCursorHidden())
+				g_KBMInput.SetCursorHiddenForUI(false);
+		}
+
 		PIXEndNamedEvent();
 		PIXBeginNamedEvent(0,"Profile manager tick");
 		//		ProfileManager.Tick();
@@ -1308,6 +1313,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 		RenderManager.Set_matrixDirty();
 #endif
+		ApplyGammaPostProcess();
+
 		// Present the frame.
 		RenderManager.Present();
 

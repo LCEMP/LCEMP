@@ -8,6 +8,20 @@
 #include "InfoTask.h"
 #include "..\..\..\Minecraft.World\Material.h"
 
+#ifdef _WINDOWS64
+#include "..\..\KeyboardMouseInput.h"
+
+static int ActionToVK(int action)
+{
+	switch (action)
+	{
+	case ACTION_MENU_A:  return KeyboardMouseInput::KEY_CONFIRM;
+	case ACTION_MENU_B:  return KeyboardMouseInput::KEY_CANCEL;
+	default:             return 0;
+	}
+}
+#endif
+
 InfoTask::InfoTask(Tutorial *tutorial, int descriptionId, int promptId /*= -1*/, bool requiresUserInput /*= false*/,
 	int iMapping /*= 0*/, ETelemetryChallenges telemetryEvent /*= eTelemetryTutorial_NoEvent*/)
 	: TutorialTask( tutorial, descriptionId, false, NULL, true, false, false )
@@ -65,12 +79,16 @@ bool InfoTask::isCompleted()
 			bool current = (*it).second;
 			if(!current)
 			{
+#ifdef _WINDOWS64
+				if( InputManager.GetValue(pMinecraft->player->GetXboxPad(), (*it).first) > 0 || g_KBMInput.IsKeyDown(ActionToVK((*it).first)) )
+#else
 				if( InputManager.GetValue(pMinecraft->player->GetXboxPad(), (*it).first) > 0 )
+#endif
 				{
 					(*it).second = true;
 					bAllComplete=true;
 				}
-				else
+				if (!(*it).second)
 				{
 					bAllComplete = false;
 				}

@@ -552,6 +552,10 @@ void GameRenderer::moveCameraToPlayer(float a)
 			double zd = Mth::cos(yRot / 180 * PI) * Mth::cos(xRot / 180 * PI) * cameraDist;
 			double yd = -Mth::sin(xRot / 180 * PI) * cameraDist;
 
+			// Invert Y offset if in third-person front view (camera faces player)
+			if (localplayer->ThirdPersonView() == 2)
+				yd = Mth::sin(xRot / 180 * PI) * cameraDist;
+
 			for (int i = 0; i < 8; i++)
 			{
 				float xo = (float)((i & 1) * 2 - 1);
@@ -588,7 +592,18 @@ void GameRenderer::moveCameraToPlayer(float a)
 
 	if (!mc->options->fixedCamera)
 	{
-		glRotatef(player->xRotO + (player->xRot - player->xRotO) * a, 1, 0, 0);
+		//glRotatef(player->xRotO + (player->xRot - player->xRotO) * a, 1, 0, 0);
+
+		float pitch = player->xRotO + (player->xRot - player->xRotO) * a;
+
+		// Invert pitch if in third-person front view (camera faces player)
+		if(localplayer->ThirdPersonView() == 2)
+		{
+			pitch = -pitch;
+		}
+
+		glRotatef(pitch, 1, 0, 0);
+
 		if( localplayer->ThirdPersonView() == 2 )
 		{
 			// Third person view is now 0 for disabled, 1 for original, 2 for flipped

@@ -30,6 +30,17 @@ ipch/
 *.exp
 
 # ===========================================
+# CLion files
+# ===========================================
+.idea
+
+# ===========================================
+# CMake
+# ===========================================
+cmake-build-debug
+cmake-build-release
+
+# ===========================================
 # Archives & packaged binaries
 # ===========================================
 *.zip
@@ -44,6 +55,8 @@ Minecraft.Client/music/
 *.binka
 
 # Common Media - UI (SWF), Graphics (PNG), Sound (WAV), Fonts
+Assets
+Assets/Common/Media/
 Minecraft.Client/Common/Media/
 # Game resource textures, art, audio, etc.
 Minecraft.Client/Common/res/
@@ -73,6 +86,7 @@ Minecraft.Client/Windows64/GameHDD/
 *.png
 # But allow source code PNG references to be noted
 !Minecraft.Client/Common/Media/Graphics/.gitkeep
+!Assets/Common/Media/Graphics/.gitkeep
 
 # SWF UI files (Flash-based UI assets)
 *.swf

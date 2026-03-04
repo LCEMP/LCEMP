@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include <xhash>
+#include <functional>
 
 #include "Hasher.h"
 
@@ -19,7 +20,11 @@ wstring Hasher::getHash(wstring &name)
 		//return new BigInteger(1, m.digest()).toString(16);
 
 		// TODO 4J Stu - Will this hash us with the same distribution as the MD5?
-		return _toString( hash_value( s ) );
+#if _MSC_VER >= 1900
+		return _toString( std::hash<wstring>{}( s ) );
+#else
+		return _toString( stdext::hash_value( s ) );
+#endif
 	//}
 	//catch (NoSuchAlgorithmException e)
 	//{

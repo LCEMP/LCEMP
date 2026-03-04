@@ -62,6 +62,7 @@
 #include "..\Minecraft.World\StrongholdFeature.h"
 #include "..\Minecraft.World\IntCache.h"
 #include "..\Minecraft.World\Villager.h"
+#include "..\Minecraft.World\EntityIO.h" // for mobs
 #include "..\Minecraft.World\SparseLightStorage.h"
 #include "..\Minecraft.World\SparseDataStorage.h"
 #include "TextureManager.h"
@@ -1456,7 +1457,7 @@ void Minecraft::run_middle()
 					{
 						if(InputManager.ButtonDown(i, MINECRAFT_ACTION_SNEAK_TOGGLE))			localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_SNEAK_TOGGLE;
 #ifdef _WINDOWS64
-						if(i == 0 && g_KBMInput.IsKeyDown(KeyboardMouseInput::KEY_SNEAK))		localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_SNEAK_TOGGLE;
+						if(i == 0 && g_KBMInput.IsKBMActive() && g_KBMInput.IsKeyDown(KeyboardMouseInput::KEY_SNEAK))		localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_SNEAK_TOGGLE;
 #endif
 					}
 					else
@@ -1469,22 +1470,41 @@ void Minecraft::run_middle()
 #ifdef _WINDOWS64
 					if (i == 0)
 					{
-						if(g_KBMInput.IsMouseButtonPressed(KeyboardMouseInput::MOUSE_LEFT))
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_ACTION;
+						if (g_KBMInput.IsKBMActive())
+						{
+							if(g_KBMInput.IsMouseButtonPressed(KeyboardMouseInput::MOUSE_LEFT))
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_ACTION;
 
-						if(g_KBMInput.IsMouseButtonPressed(KeyboardMouseInput::MOUSE_RIGHT))
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_USE;
+							if(g_KBMInput.IsMouseButtonPressed(KeyboardMouseInput::MOUSE_RIGHT))
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_USE;
 
-						if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_INVENTORY))
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_INVENTORY;
+							if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_INVENTORY))
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_INVENTORY;
 
-						if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_DROP))
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_DROP;
+							if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_DROP))
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_DROP;
 
-						if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_CRAFTING) || g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_CRAFTING_ALT))
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_CRAFTING;
+							if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_CRAFTING) || g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_CRAFTING_ALT))
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_CRAFTING;
 
-						if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_PAUSE))
+							int wheel = g_KBMInput.GetMouseWheel();
+							if (wheel > 0)
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_RIGHT_SCROLL;
+							else if (wheel < 0)
+								localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_LEFT_SCROLL;
+
+							for (int slot = 0; slot < 9; slot++)
+							{
+								if (g_KBMInput.IsKeyPressed('1' + slot))
+								{
+									if (localplayers[i]->inventory)
+										localplayers[i]->inventory->selected = slot;
+								}
+							}
+						}
+
+						// Utility keys always work regardless of KBM active state
+						if(g_KBMInput.IsKeyPressed(KeyboardMouseInput::KEY_PAUSE) && !ui.IsTutorialVisible(i))
 						{
 							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_PAUSEMENU;
 							app.DebugPrintf("PAUSE PRESSED (keyboard) - ipad = %d\n",i);
@@ -1502,21 +1522,6 @@ void Minecraft::run_middle()
 						if(g_KBMInput.IsKeyPressed(VK_F4))
 						{
 							showFpsCounter = !showFpsCounter;
-						}
-
-						int wheel = g_KBMInput.GetMouseWheel();
-						if (wheel > 0)
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_RIGHT_SCROLL;
-						else if (wheel < 0)
-							localplayers[i]->ullButtonsPressed|=1LL<<MINECRAFT_ACTION_LEFT_SCROLL;
-
-						for (int slot = 0; slot < 9; slot++)
-						{
-							if (g_KBMInput.IsKeyPressed('1' + slot))
-							{
-								if (localplayers[i]->inventory)
-									localplayers[i]->inventory->selected = slot;
-							}
 						}
 					}
 #endif
@@ -3266,7 +3271,7 @@ void Minecraft::tick(bool bFirst, bool bUpdateTextures)
 			wheel = -1;
 		}
 #ifdef _WINDOWS64
-		if (iPad == 0 && wheel == 0)
+		if (iPad == 0 && wheel == 0 && g_KBMInput.IsKBMActive())
 		{
 			int mw = g_KBMInput.GetMouseWheel();
 			if (mw > 0) wheel = -1;
@@ -3296,62 +3301,84 @@ void Minecraft::tick(bool bFirst, bool bUpdateTextures)
 		}
 
 #ifdef _WINDOWS64 // allows for the player to get the block they are looking at in creative by middle clicking.
-		if (iPad == 0 && player->abilities.instabuild && g_KBMInput.IsMouseButtonPressed(KeyboardMouseInput::MOUSE_MIDDLE) && hitResult != NULL && hitResult->type == HitResult::TILE)
+		if (iPad == 0 && g_KBMInput.IsKBMActive() && player->abilities.instabuild && g_KBMInput.IsMouseButtonPressed(KeyboardMouseInput::MOUSE_MIDDLE) && hitResult != NULL && (hitResult->type == HitResult::TILE || hitResult->type == HitResult::ENTITY))
 		{
-			//printf("MIDDLE CLICK TEST!!");
-			int tileId = level->getTile(hitResult->x, hitResult->y, hitResult->z);
-			Tile *tile = (tileId > 0 && tileId < Tile::TILE_NUM_COUNT) ? Tile::tiles[tileId] : NULL;
+			//printf("MIDDLE CLICK TEST!!"); // windermed was here.
+			int cloneId = -1;
+			int cloneData = 0;
+			bool checkData = false;
 
-			if (tile != NULL)
+			// if its a tile
+			if (hitResult->type == HitResult::TILE)
 			{
-				int cloneId = tile->cloneTileId(level, hitResult->x, hitResult->y, hitResult->z);
-
-				if (cloneId > 0 && cloneId < Item::ITEM_NUM_COUNT && Item::items[cloneId] != NULL)
+				int tileId = level->getTile(hitResult->x, hitResult->y, hitResult->z);
+				Tile* tile = (tileId > 0 && tileId < Tile::TILE_NUM_COUNT) ? Tile::tiles[tileId] : NULL;
+				if (tile != NULL)
 				{
-					int cloneData = tile->cloneTileData(level, hitResult->x, hitResult->y, hitResult->z);
-					bool checkData = Item::items[cloneId]->isStackedByData();
-
-					int quickbarSlot = -1;
-
-					for (int slot = 0; slot < Inventory::getSelectionSize(); ++slot)
-					{
-						shared_ptr<ItemInstance> quickbarItem = player->inventory->items[slot];
-						if (quickbarItem == NULL || quickbarItem->id != cloneId)
-						{
-							continue;
-						}
-
-						if (!checkData || quickbarItem->getAuxValue() == cloneData)
-						{
-							quickbarSlot = slot;
-							break;
-						}
-					}
-
-					if (quickbarSlot >= 0)
-					{
-						player->inventory->selected = quickbarSlot;
-					}
-					else
-					{
-						player->inventory->grabTexture(cloneId, cloneData, checkData, true);
-					}
-
-					// should prevent ghost items/blocks
-					shared_ptr<ItemInstance> selctedItem = player->inventory->getSelected();
-					if (gameMode != NULL && selctedItem != NULL)
-					{
-						const int creativeHotbarSlotStart = 36;
-						gameMode->handleCreativeModeItemAdd(selctedItem, creativeHotbarSlotStart + player->inventory->selected);
-					}
-
-					if (gameMode != NULL && gameMode->getTutorial() != NULL)
-					{
-						gameMode->getTutorial()->onSelectedItemChanged(player->inventory->getSelected());
-					}
-
-					player->updateRichPresence();
+					cloneId = tile->cloneTileId(level, hitResult->x, hitResult->y, hitResult->z);
+					cloneData = tile->cloneTileData(level, hitResult->x, hitResult->y, hitResult->z);
 				}
+			}
+
+			// if its an entity
+			else if (hitResult->type == HitResult::ENTITY && hitResult->entity != NULL)
+			{
+				int entityIoId = EntityIO::eTypeToIoid(hitResult->entity->GetType());
+				if (entityIoId > 0 && EntityIO::idsSpawnableInCreative.find(entityIoId) != EntityIO::idsSpawnableInCreative.end())
+				{
+					cloneId = Item::monsterPlacer_Id;
+					cloneData = entityIoId;
+					checkData = true;
+				}
+			}
+
+			// if we have a valid cloneId, try to find it in the quickbar and select it, otherwise just grab it.
+			if (cloneId > 0 && cloneId < Item::ITEM_NUM_COUNT && Item::items[cloneId] != NULL)
+			{
+				if (hitResult->type == HitResult::TILE)
+				{
+					checkData = Item::items[cloneId]->isStackedByData();
+				}
+
+				int quickbarSlot = -1;
+				for (int slot = 0; slot < Inventory::getSelectionSize(); ++slot)
+				{
+					shared_ptr<ItemInstance> quickbarItem = player->inventory->items[slot];
+					if (quickbarItem == NULL || quickbarItem->id != cloneId)
+					{
+						continue;
+					}
+
+					if (!checkData || quickbarItem->getAuxValue() == cloneData)
+					{
+						quickbarSlot = slot;
+						break;
+					}
+				}
+
+				if (quickbarSlot >= 0)
+				{
+					player->inventory->selected = quickbarSlot;
+				}
+				else
+				{
+					player->inventory->grabTexture(cloneId, cloneData, checkData, true);
+				}
+
+				// should prevent ghost items/blocks
+				shared_ptr<ItemInstance> selectedItem = player->inventory->getSelected();
+				if (gameMode != NULL && selectedItem != NULL)
+				{
+					const int creativeQuickbarSlotStart = 36; 
+					gameMode->handleCreativeModeItemAdd(selectedItem, creativeQuickbarSlotStart + player->inventory->selected);
+				}
+
+				if (gameMode != NULL && gameMode->getTutorial() != NULL)
+				{
+					gameMode->getTutorial()->onSelectedItemChanged(player->inventory->getSelected());
+				}
+
+				player->updateRichPresence();
 			}
 		}
 #endif
@@ -3367,7 +3394,7 @@ void Minecraft::tick(bool bFirst, bool bUpdateTextures)
 			}
 
 #ifdef _WINDOWS64
-			bool actionHeld = InputManager.ButtonDown(iPad, MINECRAFT_ACTION_ACTION) || (iPad == 0 && g_KBMInput.IsMouseButtonDown(KeyboardMouseInput::MOUSE_LEFT));
+			bool actionHeld = InputManager.ButtonDown(iPad, MINECRAFT_ACTION_ACTION) || (iPad == 0 && g_KBMInput.IsKBMActive() && g_KBMInput.IsMouseButtonDown(KeyboardMouseInput::MOUSE_LEFT));
 #else
 			bool actionHeld = InputManager.ButtonDown(iPad, MINECRAFT_ACTION_ACTION);
 #endif
@@ -3398,7 +3425,7 @@ void Minecraft::tick(bool bFirst, bool bUpdateTextures)
 		}
 		*/
 #ifdef _WINDOWS64
-		bool useHeld = InputManager.ButtonDown(iPad, MINECRAFT_ACTION_USE) || (iPad == 0 && g_KBMInput.IsMouseButtonDown(KeyboardMouseInput::MOUSE_RIGHT));
+		bool useHeld = InputManager.ButtonDown(iPad, MINECRAFT_ACTION_USE) || (iPad == 0 && g_KBMInput.IsKBMActive() && g_KBMInput.IsMouseButtonDown(KeyboardMouseInput::MOUSE_RIGHT));
 #else
 		bool useHeld = InputManager.ButtonDown(iPad, MINECRAFT_ACTION_USE);
 #endif

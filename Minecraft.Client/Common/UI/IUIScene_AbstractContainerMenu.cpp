@@ -471,7 +471,7 @@ void IUIScene_AbstractContainerMenu::onMouseTick()
 #endif
 
 #ifdef _WINDOWS64
-	if (!g_KBMInput.IsMouseGrabbed())
+	if (!g_KBMInput.IsMouseGrabbed() && g_KBMInput.IsKBMActive())
 	{
 		int deltaX = g_KBMInput.GetMouseDeltaX();
 		int deltaY = g_KBMInput.GetMouseDeltaY();
@@ -716,7 +716,7 @@ void IUIScene_AbstractContainerMenu::onMouseTick()
 			// If there is no stick input, and we are over a slot, then snap pointer to slot centre.
 			// 4J - TomK - only if this particular component allows so!
 #ifdef _WINDOWS64
-			if(g_KBMInput.IsMouseGrabbed() && CanHaveFocus(eSectionUnderPointer))
+			if((g_KBMInput.IsMouseGrabbed() || !g_KBMInput.IsKBMActive()) && CanHaveFocus(eSectionUnderPointer))
 #else
 			if(CanHaveFocus(eSectionUnderPointer))
 #endif

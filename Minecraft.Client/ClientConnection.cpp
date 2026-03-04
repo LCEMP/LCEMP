@@ -52,6 +52,11 @@
 #endif
 #include "DLCTexturePack.h"
 
+#ifdef _WINDOWS64
+#include "Xbox\Network\NetworkPlayerXbox.h"
+#include "Common\Network\PlatformNetworkManagerStub.h"
+#endif
+
 #ifdef _DURANGO
 #include "..\Minecraft.World\DurangoStats.h"
 #include "..\Minecraft.World\GenericStats.h"
@@ -758,6 +763,27 @@ void ClientConnection::handleAddPlayer(shared_ptr<AddPlayerPacket> packet)
 	player->displayName = player->name;
 #endif
 
+#ifdef _WINDOWS64
+	{
+		PlayerUID pktXuid = player->getXuid();
+		const PlayerUID WIN64_XUID_BASE = (PlayerUID)0xe000d45248242f2e;
+		if (pktXuid >= WIN64_XUID_BASE && pktXuid < WIN64_XUID_BASE + MINECRAFT_NET_MAX_PLAYERS)
+		{
+			BYTE smallId = (BYTE)(pktXuid - WIN64_XUID_BASE);
+			INetworkPlayer *np = g_NetworkManager.GetPlayerBySmallId(smallId);
+			if (np != NULL)
+			{
+				NetworkPlayerXbox *npx = (NetworkPlayerXbox *)np;
+				IQNetPlayer *qp = npx->GetQNetPlayer();
+				if (qp != NULL && qp->m_gamertag[0] == 0)
+				{
+					wcsncpy_s(qp->m_gamertag, 32, packet->name.c_str(), _TRUNCATE);
+				}
+			}
+		}
+	}
+#endif
+
 	//	printf("\t\t\t\t%d: Add player\n",packet->id,packet->yRot);
 
     int item = packet->carriedItem;
@@ -893,6 +919,39 @@ void ClientConnection::handleMoveEntitySmall(shared_ptr<MoveEntityPacketSmall> p
 
 void ClientConnection::handleRemoveEntity(shared_ptr<RemoveEntitiesPacket> packet)
 {
+#ifdef _WINDOWS64
+	if (!g_NetworkManager.IsHost())
+	{
+		for (int i = 0; i < packet->ids.length; i++)
+		{
+			shared_ptr<Entity> entity = getEntity(packet->ids[i]);
+			if (entity != NULL && entity->GetType() == eTYPE_PLAYER)
+			{
+				shared_ptr<Player> player = dynamic_pointer_cast<Player>(entity);
+				if (player != NULL)
+				{
+					PlayerUID xuid = player->getXuid();
+					INetworkPlayer *np = g_NetworkManager.GetPlayerByXuid(xuid);
+					if (np != NULL)
+					{
+						NetworkPlayerXbox *npx = (NetworkPlayerXbox *)np;
+						IQNetPlayer *qp = npx->GetQNetPlayer();
+						if (qp != NULL)
+						{
+							extern CPlatformNetworkManagerStub *g_pPlatformNetworkManager;
+							g_pPlatformNetworkManager->NotifyPlayerLeaving(qp);
+							qp->m_smallId = 0;
+							qp->m_isRemote = false;
+							qp->m_isHostPlayer = false;
+							qp->m_gamertag[0] = 0;
+							qp->SetCustomDataValue(0);
+						}
+					}
+				}
+			}
+		}
+	}
+#endif
 	for (int i = 0; i < packet->ids.length; i++)
 	{
 		level->removeEntity(packet->ids[i]);

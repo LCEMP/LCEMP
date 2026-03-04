@@ -8,6 +8,20 @@
 #include "ChoiceTask.h"
 #include "..\..\..\Minecraft.World\Material.h"
 
+#ifdef _WINDOWS64
+#include "..\..\KeyboardMouseInput.h"
+
+static int ActionToVK(int action)
+{
+	switch (action)
+	{
+	case ACTION_MENU_A:  return KeyboardMouseInput::KEY_CONFIRM;
+	case ACTION_MENU_B:  return KeyboardMouseInput::KEY_CANCEL;
+	default:             return 0;
+	}
+}
+#endif
+
 ChoiceTask::ChoiceTask(Tutorial *tutorial, int descriptionId, int promptId /*= -1*/, bool requiresUserInput /*= false*/,
 	int iConfirmMapping /*= 0*/, int iCancelMapping /*= 0*/,
 	eTutorial_CompletionAction cancelAction /*= e_Tutorial_Completion_None*/, ETelemetryChallenges telemetryEvent /*= eTelemetryTutorial_NoEvent*/)
@@ -51,11 +65,24 @@ bool ChoiceTask::isCompleted()
 		// If the player is under water then allow all keypresses so they can jump out
 		if( pMinecraft->localplayers[tutorial->getPad()]->isUnderLiquid(Material::water) ) return false;
 
-		if(!m_bConfirmMappingComplete && InputManager.GetValue(pMinecraft->player->GetXboxPad(), m_iConfirmMapping) > 0 )
+		int xboxPad = pMinecraft->player->GetXboxPad();
+#ifdef _WINDOWS64
+		if(!m_bConfirmMappingComplete &&
+			(InputManager.GetValue(xboxPad, m_iConfirmMapping) > 0
+				|| g_KBMInput.IsKeyDown(ActionToVK(m_iConfirmMapping))))
+#else
+		if(!m_bConfirmMappingComplete && InputManager.GetValue(xboxPad, m_iConfirmMapping) > 0 )
+#endif
 		{
 			m_bConfirmMappingComplete = true;
 		}
-		if(!m_bCancelMappingComplete && InputManager.GetValue(pMinecraft->player->GetXboxPad(), m_iCancelMapping) > 0 )
+#ifdef _WINDOWS64
+		if(!m_bCancelMappingComplete &&
+			(InputManager.GetValue(xboxPad, m_iCancelMapping) > 0
+				|| g_KBMInput.IsKeyDown(ActionToVK(m_iCancelMapping))))
+#else
+		if(!m_bCancelMappingComplete && InputManager.GetValue(xboxPad, m_iCancelMapping) > 0 )
+#endif
 		{
 			m_bCancelMappingComplete = true;
 		}
