@@ -162,28 +162,26 @@ void Input::tick(LocalPlayer *player)
         tx = ty = 0.0f;
     }
 
-	float turnX = tx * abs(tx) * turnSpeed;
-	float turnY = ty * abs(ty) * turnSpeed;
+	player->interpolateTurn(tx* abs(tx)* turnSpeed, ty* abs(ty)* turnSpeed);
 
 #ifdef _WINDOWS64
 	if (iPad == 0 && g_KBMInput.IsMouseGrabbed() && g_KBMInput.IsKBMActive())
 	{
-		float mouseSensitivity = ((float)app.GetGameSettings(iPad,eGameSetting_Sensitivity_InGame)) / 100.0f;
-		float mouseLookScale = 5.0f;
-		float mx = g_KBMInput.GetLookX(mouseSensitivity * mouseLookScale);
-		float my = g_KBMInput.GetLookY(mouseSensitivity * mouseLookScale);
-
-		if ( app.GetGameSettings(iPad,eGameSetting_ControlInvertLook) )
+		int dx = g_KBMInput.GetRawDeltaX();
+		int dy = g_KBMInput.GetRawDeltaY();
+		g_KBMInput.ConsumeMouseDelta();
+		if (dx != 0 || dy != 0)
 		{
-			my = -my;
+			float mouseSensitivity = ((float)app.GetGameSettings(iPad, eGameSetting_Sensitivity_InGame)) / 100.0f;
+			float mouseLookScale = 5.0f;
+			float mdx = dx * mouseSensitivity * mouseLookScale;
+			float mdy = -dy * mouseSensitivity * mouseLookScale;
+			if (app.GetGameSettings(iPad, eGameSetting_ControlInvertLook))
+				mdy = -mdy;
+			player->interpolateTurn(mdx, mdy);
 		}
-
-		turnX += mx;
-		turnY += my;
 	}
 #endif
-
-	player->interpolateTurn(turnX, turnY);
         
     //jumping = controller.isButtonPressed(0);
 

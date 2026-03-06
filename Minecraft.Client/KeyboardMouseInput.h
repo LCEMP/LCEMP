@@ -80,6 +80,10 @@ public:
 	float GetLookX(float sensitivity) const;
 	float GetLookY(float sensitivity) const;
 
+	int GetRawDeltaX() const { return m_mouseDeltaAccumX; }
+	int GetRawDeltaY() const { return m_mouseDeltaAccumY; }
+	void ConsumeMouseDelta() { m_mouseDeltaAccumX = 0; m_mouseDeltaAccumY = 0; }
+
 private:
 	bool m_keyDown[MAX_KEYS];
 	bool m_keyDownPrev[MAX_KEYS];

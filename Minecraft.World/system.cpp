@@ -52,7 +52,14 @@ void System::arraycopy(arrayWithLength<int> src, unsigned int srcPos, arrayWithL
 //The current value of the system timer, in nanoseconds.
 __int64 System::nanoTime()
 {
-	return GetTickCount() * 1000000LL;
+	static LARGE_INTEGER s_frequency = { 0 };
+	if (s_frequency.QuadPart == 0)
+		QueryPerformanceFrequency(&s_frequency);
+
+	LARGE_INTEGER counter;
+	QueryPerformanceCounter(&counter);
+
+	return (__int64)((double)counter.QuadPart * 1000000000.0 / (double)s_frequency.QuadPart);
 }
 
 //Returns the current time in milliseconds. Note that while the unit of time of the return value is a millisecond,
