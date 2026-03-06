@@ -10,8 +10,8 @@
 
 #define SKIN_SELECT_PACK_DEFAULT 0
 #define SKIN_SELECT_PACK_FAVORITES 1
-//#define SKIN_SELECT_PACK_PLAYER_CUSTOM 1
-#define SKIN_SELECT_MAX_DEFAULTS 2
+#define SKIN_SELECT_PACK_PLAYER_CUSTOM 2
+#define SKIN_SELECT_MAX_DEFAULTS 3
 
 WCHAR *UIScene_SkinSelectMenu::wchDefaultNamesA[]=
 {
@@ -256,8 +256,21 @@ void UIScene_SkinSelectMenu::handleInput(int iPad, int key, bool repeat, bool pr
 					}
 				}
 				break;
+			case SKIN_SELECT_PACK_PLAYER_CUSTOM:
+				if (app.m_customSkinNames.size() > 0)
+				{
+					wstring selectedSkin = app.m_customSkinNames[m_skinIndex];
+					app.SetPlayerSkin(iPad, selectedSkin);
+					app.SetPlayerCape(iPad, L"");
+					setCharacterSelected(true);
+					m_currentSkinPath = app.GetPlayerSkinName(iPad);
+					m_originalSkinId = app.GetPlayerSkinId(iPad);
+					ui.PlayUISFX(eSFX_Press);
+				}
+				break;
 			default:
 				if( m_currentPack != NULL )
+
 				{
 					DLCSkinFile *skinFile = m_currentPack->getSkinFile(m_skinIndex);
 
@@ -598,6 +611,18 @@ void UIScene_SkinSelectMenu::InputActionOK(unsigned int iPad)
 	}
 }
 		break;
+	case SKIN_SELECT_PACK_PLAYER_CUSTOM:
+		if (app.m_customSkinNames.size() > 0)
+		{
+			wstring selectedSkin = app.m_customSkinNames[m_skinIndex];
+			app.SetPlayerSkin(iPad, selectedSkin);
+			app.SetPlayerCape(iPad, L"");
+			setCharacterSelected(true);
+			m_currentSkinPath = app.GetPlayerSkinName(iPad);
+			m_originalSkinId = app.GetPlayerSkinId(iPad);
+			ui.PlayUISFX(eSFX_Press);
+		}
+		break;
 	default:
 		if( m_currentPack != NULL )
 		{
@@ -861,6 +886,27 @@ void UIScene_SkinSelectMenu::handleSkinIndexChanged()
 				m_bNoSkinsToShow=true;
 			}
 			break;
+		case SKIN_SELECT_PACK_PLAYER_CUSTOM:
+			if (app.m_customSkinNames.size() > 0)
+			{
+				m_selectedSkinPath = app.m_customSkinNames[m_skinIndex];
+				skinName = m_selectedSkinPath;
+				skinOrigin = L"Custom Skins";
+
+				if (m_selectedSkinPath.compare(m_currentSkinPath) == 0)
+				{
+					setCharacterSelected(true);
+				}
+				setCharacterLocked(false);
+				m_characters[eCharacter_Current].setVisible(true);
+				m_controlSkinNamePlate.setVisible(true);
+			}
+			else
+			{
+				m_characters[eCharacter_Current].setVisible(false);
+				m_bNoSkinsToShow = true;
+			}
+			break;
 		}
 	}
 
@@ -979,6 +1025,15 @@ void UIScene_SkinSelectMenu::handleSkinIndexChanged()
 						}
 					}
 					break;
+				case SKIN_SELECT_PACK_PLAYER_CUSTOM:
+					if (app.m_customSkinNames.size() > 0)
+					{
+						otherSkinPath = app.m_customSkinNames[nextIndex];
+						otherCapePath = L"";
+						othervAdditionalSkinBoxes = NULL;
+						backupTexture = TN_MOB_CHAR;
+					}
+					break;
 				default:
 					break;
 				}
@@ -1049,7 +1104,15 @@ void UIScene_SkinSelectMenu::handleSkinIndexChanged()
 							backupTexture = TN_MOB_CHAR;
 						}
 					}
-
+					break;
+				case SKIN_SELECT_PACK_PLAYER_CUSTOM:
+					if (app.m_customSkinNames.size() > 0)
+					{
+						otherSkinPath = app.m_customSkinNames[previousIndex];
+						otherCapePath = L"";
+						othervAdditionalSkinBoxes = NULL;
+						backupTexture = TN_MOB_CHAR;
+					}
 					break;
 				default:
 					break;
@@ -1129,6 +1192,13 @@ int UIScene_SkinSelectMenu::getNextSkinIndex(DWORD sourceIndex)
 		}
 
 		break;
+	case SKIN_SELECT_PACK_PLAYER_CUSTOM:
+		++nextSkin;
+		if (nextSkin >= (int)app.m_customSkinNames.size())
+		{
+			nextSkin = 0;
+		}
+		break;
 	default:
 		++nextSkin;
 
@@ -1162,6 +1232,16 @@ int UIScene_SkinSelectMenu::getPreviousSkinIndex(DWORD sourceIndex)
 		{
 			--previousSkin;
 		}		
+		break;
+	case SKIN_SELECT_PACK_PLAYER_CUSTOM:
+		if (previousSkin == 0)
+		{
+			previousSkin = (int)app.m_customSkinNames.size() - 1;
+		}
+		else
+		{
+			--previousSkin;
+		}
 		break;
 	default:
 		if(previousSkin==0)
@@ -1233,10 +1313,11 @@ void UIScene_SkinSelectMenu::handlePackIndexChanged()
 					if(found) m_skinIndex = app.GetPlayerFavoriteSkinsPos(m_iPad);
 				}
 			}
-			break;
-		default:
-			break;
-		}
+		break;
+	default:
+		break;
+	}
+
 	}
 	handleSkinIndexChanged();
 	updatePackDisplay();
@@ -1261,6 +1342,9 @@ void UIScene_SkinSelectMenu::updatePackDisplay()
 		case SKIN_SELECT_PACK_FAVORITES:				
 			setCentreLabel(app.GetString(IDS_FAVORITES_SKIN_PACK));
 			break;
+		case SKIN_SELECT_PACK_PLAYER_CUSTOM:				
+			setCentreLabel(L"Custom Skins");
+			break;
 		}
 	}
 
@@ -1280,6 +1364,9 @@ void UIScene_SkinSelectMenu::updatePackDisplay()
 		case SKIN_SELECT_PACK_FAVORITES:				
 			setRightLabel(app.GetString(IDS_FAVORITES_SKIN_PACK));
 			break;
+		case SKIN_SELECT_PACK_PLAYER_CUSTOM:				
+			setRightLabel(L"Custom Skins");
+			break;
 		}
 	}
 
@@ -1298,6 +1385,9 @@ void UIScene_SkinSelectMenu::updatePackDisplay()
 			break;
 		case SKIN_SELECT_PACK_FAVORITES:				
 			setLeftLabel(app.GetString(IDS_FAVORITES_SKIN_PACK));
+			break;
+		case SKIN_SELECT_PACK_PLAYER_CUSTOM:				
+			setLeftLabel(L"Custom Skins");
 			break;
 		}
 	}
