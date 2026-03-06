@@ -22,9 +22,13 @@ TextureAndGeometryChangePacket::TextureAndGeometryChangePacket(shared_ptr<Entity
 	wstring skinValue = path.substr(7,path.size());
 	skinValue = skinValue.substr(0,skinValue.find_first_of(L'.'));
 	std::wstringstream ss;
-	ss << std::dec << skinValue.c_str();
+	bool isDlcSkin = (path.size() >= 3) && (path.substr(0, 3).compare(L"dlc") == 0);
+	if (isDlcSkin)
+		ss << std::dec << skinValue.c_str();
+	else
+		ss << std::hex << skinValue.c_str();
 	ss >> dwSkinID;
-	dwSkinID = MAKE_SKIN_BITMASK(true, dwSkinID);
+	dwSkinID = MAKE_SKIN_BITMASK(isDlcSkin, dwSkinID);
 
 }
 

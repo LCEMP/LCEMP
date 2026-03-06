@@ -126,7 +126,7 @@ void PlayerConnection::disconnect(DisconnectPacket::eDisconnectReason reason)
 	send( shared_ptr<DisconnectPacket>( new DisconnectPacket(reason) ));
 	connection->sendAndQuit();
 	// 4J-PB - removed, since it needs to be localised in the language the client is in
-	//server->players->broadcastAll( shared_ptr<ChatPacket>( new ChatPacket(L"§e" + player->name + L" left the game.") ) );
+	//server->players->broadcastAll( shared_ptr<ChatPacket>( new ChatPacket(L"ï¿½e" + player->name + L" left the game.") ) );
 	if(getWasKicked())
 	{
 		server->getPlayers()->broadcastAll( shared_ptr<ChatPacket>( new ChatPacket(player->name, ChatPacket::e_ChatPlayerKickedFromGame) ) );
@@ -569,7 +569,7 @@ void PlayerConnection::onDisconnect(DisconnectPacket::eDisconnectReason reason, 
 	if( done ) return;
 //    logger.info(player.name + " lost connection: " + reason);
 	// 4J-PB - removed, since it needs to be localised in the language the client is in
-	//server->players->broadcastAll( shared_ptr<ChatPacket>( new ChatPacket(L"§e" + player->name + L" left the game.") ) );
+	//server->players->broadcastAll( shared_ptr<ChatPacket>( new ChatPacket(L"ï¿½e" + player->name + L" left the game.") ) );
 	if(getWasKicked())
 	{
 		server->getPlayers()->broadcastAll( shared_ptr<ChatPacket>( new ChatPacket(player->name, ChatPacket::e_ChatPlayerKickedFromGame) ) );
@@ -740,13 +740,13 @@ int PlayerConnection::countDelayedPackets()
 void PlayerConnection::info(const wstring& string)
 {
 	// 4J-PB - removed, since it needs to be localised in the language the client is in
-	//send( shared_ptr<ChatPacket>( new ChatPacket(L"§7" + string) ) );
+	//send( shared_ptr<ChatPacket>( new ChatPacket(L"ï¿½7" + string) ) );
 }
 
 void PlayerConnection::warn(const wstring& string)
 {
 	// 4J-PB - removed, since it needs to be localised in the language the client is in
-	//send( shared_ptr<ChatPacket>( new ChatPacket(L"§9" + string) ) );
+	//send( shared_ptr<ChatPacket>( new ChatPacket(L"ï¿½9" + string) ) );
 }
 
 wstring PlayerConnection::getConsoleName()
@@ -1000,14 +1000,7 @@ void PlayerConnection::handleTextureAndGeometryChange(shared_ptr<TextureAndGeome
 	}
 	else if(!packet->path.empty() && app.IsFileInMemoryTextures(packet->path))
 	{			
-		// Update the ref count on the memory texture data
 		app.AddMemoryTextureFile(packet->path,NULL,0);
-
-		player->setCustomSkin(packet->dwSkinID);
-
-		// If we already have the texture, then we already have the model parts too
-		//app.SetAdditionalSkinBoxes(packet->dwSkinID,)
-		//DebugBreak();
 	}
 	server->getPlayers()->broadcastAll( shared_ptr<TextureAndGeometryChangePacket>( new TextureAndGeometryChangePacket(player,packet->path) ), player->dimension );
 }
